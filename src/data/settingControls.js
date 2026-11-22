@@ -31,36 +31,6 @@ export const SETTINGS_GROUPS = {
         { key: 'showAltArrows', label: 'Alternative arrows', type: 'toggle' },
       ],
     },
-    {
-      title: 'Auto-move',
-      settings: [
-        { key: 'autoMove', label: 'Auto-move', type: 'toggle' },
-        { key: 'instantMove', label: 'Instant move', type: 'toggle' },
-        { key: 'autoMoveDelayMin', label: 'Delay min (s)', type: 'range', min: 0, max: 3, step: 0.1, decimals: 1, disabledWhen: s => s.instantMove },
-        { key: 'autoMoveDelayMax', label: 'Delay max (s)', type: 'range', min: 0, max: 5, step: 0.1, decimals: 1, disabledWhen: s => s.instantMove },
-        { key: 'smartTiming', label: 'Smart timing', type: 'toggle' },
-      ],
-    },
-    {
-      title: 'Behavior',
-      settings: [
-        { key: 'showMoveIcon', label: 'Move icons', type: 'toggle' },
-        { key: 'autoRematch', label: 'Auto-rematch', type: 'toggle' },
-        { key: 'autoNewGame', label: 'Auto new game', type: 'toggle' },
-        { key: 'stealthMode', label: 'Stealth mode', type: 'toggle' },
-        { key: 'targetAccuracy', label: 'Target accuracy', type: 'range', min: 50, max: 100, suffix: '%' },
-      ],
-    },
-    {
-      title: 'Win / loss balance',
-      settings: [
-        { key: 'wlBalance', label: 'Balance W/L', type: 'toggle' },
-        { key: 'maxConsecutiveWins', label: 'Max wins in a row', type: 'range', min: 1, max: 10, disabledWhen: s => !s.wlBalance },
-        { key: 'maxConsecutiveLosses', label: 'Max losses in a row', type: 'range', min: 1, max: 10, disabledWhen: s => !s.wlBalance },
-        { key: 'throwRandom', label: 'Random throws', type: 'toggle' },
-        { key: 'lossRandom', label: 'Random losses', type: 'toggle' },
-      ],
-    },
   ],
   engine: [
     {

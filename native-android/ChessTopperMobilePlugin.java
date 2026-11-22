@@ -46,23 +46,9 @@ public class ChessTopperMobilePlugin extends Plugin {
         m.put("showBestMove", false);
         m.put("showOpponentBestMove", false);
         m.put("showAltArrows", false);
-        m.put("autoMove", false);
-        m.put("instantMove", false);
-        m.put("autoMoveDelayMin", 0.1f);
-        m.put("autoMoveDelayMax", 0.3f);
         m.put("renderMode", "overlay");
         m.put("playerColor", "auto");
         m.put("showMoveIcon", false);
-        m.put("smartTiming", true);
-        m.put("autoRematch", false);
-        m.put("autoNewGame", false);
-        m.put("stealthMode", true);
-        m.put("wlBalance", false);
-        m.put("maxConsecutiveWins", 2);
-        m.put("maxConsecutiveLosses", 3);
-        m.put("throwRandom", false);
-        m.put("lossRandom", false);
-        m.put("targetAccuracy", 100);
         return m;
     }
 

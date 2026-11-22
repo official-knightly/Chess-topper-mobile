@@ -3,7 +3,7 @@ import { Capacitor, registerPlugin } from '@capacitor/core'
 const Native = registerPlugin('ChessTopperMobile')
 const isNative = Capacitor.isNativePlatform()
 const noop = () => () => {}
-const defaultGame = { enabled:true, depth:18, showBestMove:false, showOpponentBestMove:false, showAltArrows:false, autoMove:false, instantMove:false, autoMoveDelayMin:0.1, autoMoveDelayMax:0.3, renderMode:'overlay', playerColor:'auto', showMoveIcon:false, smartTiming:true, autoRematch:false, autoNewGame:false, stealthMode:true, wlBalance:false, maxConsecutiveWins:2, maxConsecutiveLosses:3, throwRandom:false, lossRandom:false, targetAccuracy:100 }
+const defaultGame = { enabled:true, depth:18, showBestMove:false, showOpponentBestMove:false, showAltArrows:false, renderMode:'overlay', playerColor:'auto', showMoveIcon:false }
 const defaultEngine = { skillLevel:20, limitStrength:false, elo:1500, threads:2, hash:256 }
 let localGame = { ...defaultGame }
 let localEngine = { ...defaultEngine }
@@ -106,10 +106,10 @@ window.chessist = {
     })
     if (!response.ok) throw new Error(response.status === 404 ? 'No Android release has been published yet.' : 'Could not check for Android updates.')
     const release = await response.json()
-    const asset = (release.assets || []).find(item => /\\.apk$/i.test(item.name))
+    const asset = (release.assets || []).find(item => /\.apk$/i.test(item.name))
     const latestVersion = String((release.body || '').match(/Version:\s*([0-9.]+)/i)?.[1] || release.tag_name || '').replace(/^mobile-v?/i, '').replace(/^v/i, '')
-    const currentVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.1'
-    const parts = value => (value.match(/\\d+/g) || ['0']).map(Number)
+    const currentVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.3'
+    const parts = value => (value.match(/\d+/g) || ['0']).map(Number)
     const a = parts(latestVersion), c = parts(currentVersion)
     let newer = false
     for (let i = 0; i < Math.max(a.length, c.length); i++) {

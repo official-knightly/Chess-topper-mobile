@@ -235,7 +235,7 @@ public class ChessTopperMobilePlugin extends Plugin {
         }
         prefs().edit().putString("selected_apps", cleaned.toString()).apply();
         JSObject result = new JSObject();
-        result.put("packages", new JSArray(cleaned));
+        result.put("packages", toJsArray(cleaned));
         call.resolve(result);
     }
 

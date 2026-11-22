@@ -1,4 +1,5 @@
 import './mobile/mobile-bridge'
+import './mobile/mobile.css'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import '../ui-template/src/styles.css'

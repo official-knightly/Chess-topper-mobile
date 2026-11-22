@@ -9,9 +9,10 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "android:sync": "npm run build && cap sync android",
+    "android:sync": "npm run build && npm run android:setup && cap sync android",
     "android:open": "cap open android",
-    "android:build": "npm run android:sync && cd android && ./gradlew assembleDebug"
+    "android:build": "npm run android:sync && cd android && ./gradlew assembleDebug",
+    "android:setup": "node scripts/setup-android.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",

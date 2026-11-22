@@ -1,0 +1,75 @@
+name: Chess Topper Android Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["mobile-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out mobile repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install JavaScript dependencies
+        run: npm install
+
+      - name: Generate native Android project
+        run: npm run android:setup
+
+      - name: Build mobile interface
+        run: npm run build
+
+      - name: Sync web assets and Capacitor plugins
+        run: npx cap sync android
+
+      - name: Commit generated Android Studio project
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add android package-lock.json
+          if git diff --cached --quiet; then
+            echo "Android project is already current."
+          else
+            git commit -m "Generate Android Studio project"
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
+          fi
+
+      - name: Build debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: chess-topper-android-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14

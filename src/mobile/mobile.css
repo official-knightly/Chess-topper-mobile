@@ -50,3 +50,4 @@
  .mobile-overlay-actions { grid-template-columns:1fr 1fr; }
  .page-content.mobile-apps-page,.page-content.mobile-about-page { padding-bottom:max(24px,env(safe-area-inset-bottom)); }
 }
+.mobile-update-available { color:rgb(var(--status-green)); font-size:13px; font-weight:700; }

@@ -69,6 +69,8 @@ public class ChessTopperAccessibilityService extends AccessibilityService {
         if (packageText == null) return;
         String packageName = packageText.toString();
         if (packageName.isEmpty() || packageName.equals(getPackageName())) {
+            activePackage = "";
+            prefs().edit().putString("foreground_package", "").apply();
             hideOverlay();
             return;
         }

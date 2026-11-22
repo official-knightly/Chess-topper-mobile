@@ -164,7 +164,7 @@ export default function App() {
       setOverlayPermissionNeeded(!!state?.enabled && !state?.accessibilityEnabled)
     })
     const offTarget = api.onTargetChanged?.(setCurrentTarget)
-    if (!isMobile) api.checkUpdate?.().then(setUpdateStatus).catch(() => {})
+    api.checkUpdate?.().then(setUpdateStatus).catch(error => setUpdateStatus({ error: error?.message || 'Update check failed.' }))
     return () => {
       mounted = false
       offS?.(); offE?.(); offP?.(); offMove?.(); offOverlay?.(); offTarget?.()
@@ -214,7 +214,7 @@ export default function App() {
           onEngineChange={(key, value) => changeSetting('engine', key, value)}
           loadError={settingsLoadError} />}
         {page === 'about' && (isMobile
-          ? <MobileAboutPage />
+          ? <MobileAboutPage updateStatus={updateStatus} onUpdateStatus={setUpdateStatus} />
           : <AboutPage updateStatus={updateStatus} onUpdateStatus={setUpdateStatus} />)}
       </div>
       {settingsError && (

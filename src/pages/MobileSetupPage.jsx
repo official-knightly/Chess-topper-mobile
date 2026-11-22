@@ -111,7 +111,7 @@ export default function MobileSetupPage({ onOpenApps }) {
         </div>
       </SetupCard>
       {error && <p className="mobile-error" role="status">{error}</p>}
-      <p className="mobile-footnote">This enables the floating control panel. Live board detection and engine analysis require a dedicated adapter for each chess app and are not enabled for every app yet.</p>
+      <p className="mobile-footnote">Customize the floating panel from the top-left menu: open the drawer and use <strong>Add shortcuts</strong> to choose ELO, depth, skill level and other settings. Live board detection and engine analysis still require a compatible adapter for each chess app.</p>
     </div>
   )
 }

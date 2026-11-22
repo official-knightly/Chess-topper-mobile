@@ -11,13 +11,14 @@ import AppsPage from './pages/AppsPage'
 import AboutPage from './pages/AboutPage'
 import MobileAboutPage from './pages/MobileAboutPage'
 import logo from './assets/chess-topper-knight.svg'
+import mobileLogo from '../logo.png'
 
 const isMobile = window.chessist?.isMobile === true
 const piecesKey = (fen) => (fen ? fen.split(' ')[0] : '')
 const brand = {
   name: 'Chess Topper',
   caption: isMobile ? 'Mobile assistant' : 'Desktop analysis',
-  mark: <img src={logo} alt="" width={24} height={24} style={{ display: 'block', objectFit: 'contain' }} />,
+  mark: <img src={isMobile ? mobileLogo : logo} alt="" width={24} height={24} style={{ display: 'block', objectFit: 'contain' }} />,
 }
 const navigation = [
   { id: 'evaluation', label: 'Evaluation', icon: <IconEval aria-hidden="true" /> },

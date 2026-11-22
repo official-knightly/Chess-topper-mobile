@@ -241,9 +241,17 @@ public class ChessTopperMobilePlugin extends Plugin {
 
     private boolean accessibilityEnabled() {
         String enabled = Settings.Secure.getString(getContext().getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
-        if (enabled == null) return false;
-        String flat = new ComponentName(getContext(), ChessTopperAccessibilityService.class).flattenToString();
-        return enabled.toLowerCase().contains(flat.toLowerCase());
+        if (enabled == null || enabled.isEmpty()) return false;
+        String[] components = enabled.split(":");
+        for (String item : components) {
+            ComponentName component = ComponentName.unflattenFromString(item);
+            if (component != null
+                && getContext().getPackageName().equals(component.getPackageName())
+                && ChessTopperAccessibilityService.class.getName().equals(component.getClassName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private JSObject overlayState() {

@@ -50,9 +50,9 @@ public class ChessTopperAccessibilityService extends AccessibilityService {
         super.onServiceConnected();
         if (getServiceInfo() != null) {
             android.accessibilityservice.AccessibilityServiceInfo info = getServiceInfo();
-            info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED | AccessibilityEvent.TYPE_WINDOWS_CHANGED;
+            info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED;
             info.feedbackType = android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_GENERIC;
-            info.notificationTimeout = 100;
+            info.notificationTimeout = 120;
             info.flags = 0;
             setServiceInfo(info);
         }

@@ -1,23 +1,34 @@
-<p align="center"><img src="src/assets/chess-topper-wordmark.png" alt="Chess Topper" width="420"></p>
+<p align="center"><img src="src/assets/chess-topper-wordmark.png" alt="Chess Topper Mobile" width="360"></p>
 
 <h1 align="center">Chess Topper Mobile</h1>
 
-<p align="center">Android companion app with the familiar Chess Topper interface, configurable quick settings and a floating knight control.</p>
+<p align="center">A mobile-first Android chess training and analysis assistant with a floating knight launcher and compact quick-controls panel.</p>
 
-## Mobile experience
+## Android app
 
-- The hamburger menu in the top-left opens Evaluation, Chess apps, Setup, About and Settings.
-- Evaluation keeps the chessboard and has an **Overlay app** panel directly below it.
-- Select installed apps such as Chess.com or Lichess from **Chess apps**. You can also choose other launchable apps installed on the device.
-- Enable the floating knight from **Setup**. Android then asks you to turn on the Chess Topper accessibility service.
-- Tap the floating knight above a selected app to open the compact quick-settings panel.
-- Add controls from the existing **Add shortcuts** picker in the navigation drawer. The floating panel reads the saved shortcut list (for example ELO, depth and skill level).
+Chess Topper Mobile is an Android application. This repository contains the mobile app only.
 
-## Important compatibility note
+- Responsive, touch-friendly Chess Topper interface.
+- Top-left menu for Evaluation, Apps, Setup, About and Settings.
+- Chessboard and an **Overlay app** control below the board.
+- Select Chess.com, Lichess and other installed apps as overlay targets.
+- Floating knight launcher and a compact panel with user-selected shortcuts.
+- Shortcuts can include engine ELO limit, analysis depth, skill level, threads and hash settings.
+- Android accessibility service receives foreground-window state events only. It does not inspect screen contents or control chess moves.
 
-The floating button can appear over selected apps. That does **not** mean Chess Topper can automatically read every chessboard. Live position detection, engine evaluation and board interaction require a compatible adapter for each chess app. The current mobile foundation implements app selection, foreground-app detection and quick settings; it does not claim universal live board recognition.
+## Fair-play use
 
-The accessibility service is configured to receive window-state events only and does not request access to window content, screen text or move input. Users must enable it manually in Android Accessibility settings. Android provides accessibility overlay windows specifically for accessibility services; the service is used here only to show the floating control panel.
+The floating assistant is for training boards, puzzles, self-play and post-game review. It must not provide engine moves or automated play during live rated games. Selecting an app only enables the floating launcher over that app; it does not mean the app can read every chessboard.
+
+## Stockfish for Android
+
+The planned engine setup downloads the official Stockfish Android binary on first engine setup, selects the matching Android CPU architecture, verifies the download, and stores it in app-private storage for later offline use. The engine integration is intended for positions entered in Chess Topper, puzzles and completed-game analysis. Do not use it to obtain outside assistance during live rated games.
+
+Stockfish is distributed under GPLv3. Any release that redistributes a Stockfish binary must include the corresponding source code or a clear source pointer and the required license notices.
+
+## App connections
+
+The Apps page lets users select installed Android apps, including Chess.com and Lichess, as overlay targets. Account linking and completed-game import are separate integrations and require the relevant official account/API authorization. App selection alone does not sign in to an account.
 
 ## Build the Android app
 
@@ -30,24 +41,24 @@ npm run android:sync
 npm run android:open
 ```
 
-To build a local debug APK:
+Build a local debug APK:
 
 ```bash
 npm run android:build
 ```
 
-The generated project is under `android/`. GitHub Actions also builds a debug APK on pushes to `main` and uploads it as the `chess-topper-android-debug` workflow artifact.
+## GitHub Actions and releases
 
-## Native architecture
+Every push to `main` builds an installable Android APK. The workflow uploads a 30-day artifact and publishes the APK asset to the GitHub release tagged `mobile-latest`.
 
-- `src/` and `ui-template/` — React interface reused from desktop Chess Topper.
-- `src/mobile/` — Capacitor bridge and mobile styles.
-- `native-android/` — native plugin, accessibility service and service configuration templates.
-- `scripts/setup-android.mjs` — generates the Capacitor Android project and copies native components.
-- `android/` — generated Android Studio project.
+- [Latest Android APK release](https://github.com/official-knightly/Chess-topper-mobile/releases/tag/mobile-latest)
+- [Android build workflow](https://github.com/official-knightly/Chess-topper-mobile/actions/workflows/android.yml)
 
-## Repositories
+## Project structure
 
-- [Chess Topper Mobile](https://github.com/official-knightly/Chess-topper-mobile)
-- [Desktop Chess Topper](https://github.com/official-knightly/Chess-topper-app-)
+- `src/` — mobile React interface and screens.
+- `src/mobile/` — Capacitor bridge and mobile-specific behavior.
+- `native-android/` — Android plugin, floating overlay service and configuration.
+- `scripts/setup-android.mjs` — generates the native Android project.
+- `android/` — Android Studio project.
 

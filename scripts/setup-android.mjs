@@ -59,6 +59,9 @@ if (!manifest.includes('ChessTopperAccessibilityService')) {
 }
 manifest = manifest.replace(/android:icon="[^"]*"/, 'android:icon="@drawable/chess_topper_logo"')
 manifest = manifest.replace(/android:roundIcon="[^"]*"/, 'android:roundIcon="@drawable/chess_topper_logo"')
+if (!manifest.includes('android:icon=')) {
+  manifest = manifest.replace('<application', '<application android:icon="@drawable/chess_topper_logo" android:roundIcon="@drawable/chess_topper_logo"')
+}
 await writeFile(manifestPath, manifest)
 
 const stringsPath = join(valuesDir, 'strings.xml')
@@ -67,6 +70,9 @@ if (!strings.includes('accessibility_service_description')) {
   strings = strings.replace('</resources>', '    <string name="accessibility_service_description">Detects the selected foreground app so Chess Topper can show its floating quick controls. It does not read screen content or interact with chess moves.</string>\n</resources>')
 }
 strings = strings.replace(/<string name="app_name">[^<]*<\/string>/, '<string name="app_name">Chess Topper</string>')
+if (!strings.includes('name="app_name"')) {
+  strings = strings.replace('</resources>', '    <string name="app_name">Chess Topper</string>\n</resources>')
+}
 await writeFile(stringsPath, strings)
 
 console.log('Android project prepared with the Chess Topper native bridge, foreground-app service and knight icon.')

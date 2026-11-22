@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { App } from '@capacitor/app'
 
 function SetupCard({ title, description, children }) {
   return (
@@ -35,7 +36,15 @@ export default function MobileSetupPage({ onOpenApps }) {
     refresh()
     const off = window.chessist.onOverlayChanged?.(refresh)
     const offTarget = window.chessist.onTargetChanged?.(setCurrentTarget)
-    return () => { off?.(); offTarget?.() }
+    let appStateHandle
+    App.addListener('appStateChange', state => {
+      if (state.isActive) refresh()
+    }).then(handle => { appStateHandle = handle }).catch(() => {})
+    return () => {
+      off?.()
+      offTarget?.()
+      appStateHandle?.remove()
+    }
   }, [])
 
   async function enable() {

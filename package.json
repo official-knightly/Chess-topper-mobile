@@ -2,7 +2,7 @@
   "name": "chess-topper-mobile",
   "version": "1.0.0",
   "private": true,
-  "description": "Chess Topper Android companion with a floating overlay and quick settings.",
+  "description": "Android-only Chess Topper mobile app with floating training overlay and quick settings.",
   "author": "Official Knightly",
   "license": "UNLICENSED",
   "scripts": {

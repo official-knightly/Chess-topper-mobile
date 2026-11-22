@@ -1,167 +1,32 @@
 {
-  "name": "chess-topper-desktop",
-  "version": "1.0.9",
+  "name": "chess-topper-mobile",
+  "version": "1.0.0",
   "private": true,
-  "description": "Chess Topper native desktop chess application",
-  "main": "electron/main.js",
-  "author": {
-    "name": "Official Knightly",
-    "email": "noreply@github.com"
-  },
+  "description": "Chess Topper Android companion with a floating overlay and quick settings.",
+  "author": "Official Knightly",
   "license": "UNLICENSED",
   "scripts": {
-    "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+    "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "test": "node --check extension/src/content/worldchess.js && node --check extension/src/background/service-worker.js && node --check extension/src/content/move-observer.js && node --check electron/main.js && node --check electron/preload.js && node --check electron/ws-server.js && node --check electron/wsserver.js && node --check electron/lichess-monitor.js && node --check electron/lichess-api.js && node --test electron/engine-authorization.test.js electron/fairness-lock.test.js && vitest run electron/bun-ws-transport.test.js electron/engine.test.js electron/extension-move.test.js electron/extension-reload.test.js electron/installer-updater.test.js electron/lichess-round.test.js electron/move-observer.test.js electron/stockfish.test.js src/services/platform-adapters.test.js",
-    "start": "electron .",
-    "package:dir": "npm run build:firefox-ext && npm run build:worker && npm run build && npm run generate:icons && electron-builder --dir",
-    "dist:win": "npm run build:firefox-ext && npm run build:worker && npm run build && npm run generate:icons && electron-builder --win nsis --publish never && node scripts/verify-package.mjs win",
-    "dist:mac": "npm run build:firefox-ext && npm run build:worker && npm run build && npm run generate:icons && electron-builder --mac dmg --publish never && node scripts/verify-package.mjs mac",
-    "dist:linux": "npm run build:firefox-ext && npm run build:worker && npm run build && npm run generate:icons && electron-builder --linux AppImage deb --publish never && node scripts/verify-package.mjs linux",
-    "build:firefox-ext": "node scripts/build-firefox-ext.mjs",
-    "package:extensions": "node scripts/package-extensions.mjs",
-    "build:worker": "bun scripts/build-ws-worker.mjs",
-    "build:overlay": "powershell -ExecutionPolicy Bypass -File scripts/build-overlay.ps1",
-    "generate:icons": "node scripts/generate-icons.mjs"
+    "preview": "vite preview --host 0.0.0.0",
+    "android:sync": "npm run build && cap sync android",
+    "android:open": "cap open android",
+    "android:build": "npm run android:sync && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/preferences": "^8.0.0",
     "@fontsource/instrument-sans": "5.2.8",
     "chess.js": "1.4.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "ws": "8.18.3",
-    "electron-updater": "^6.6.2",
-    "react-markdown": "10.1.0",
-    "extract-zip": "^2.0.1"
+    "react-markdown": "10.1.0"
   },
   "devDependencies": {
-    "concurrently": "9.2.1",
-    "cross-env": "10.1.0",
-    "electron": "38.2.0",
-    "electron-builder": "26.0.12",
-    "vite": "6.3.5",
-    "vitest": "3.2.4",
-    "wait-on": "8.0.4",
+    "@capacitor/cli": "^8.0.0",
     "@vitejs/plugin-react": "^4.3.4",
-    "sharp": "^0.34.5"
-  },
-  "build": {
-    "appId": "com.officialknightly.chesstopper",
-    "productName": "Chess Topper",
-    "asar": true,
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*",
-      "package.json",
-      "node_modules/ws/**/*",
-      "node_modules/extract-zip/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "build/worker/bun-ws-worker.exe",
-        "to": "bun-ws-worker.exe"
-      },
-      {
-        "from": "extension",
-        "to": "extension",
-        "filter": [
-          "**/*",
-          "!**/.DS_Store"
-        ]
-      },
-      {
-        "from": "firefox",
-        "to": "firefox",
-        "filter": [
-          "**/*",
-          "!**/.DS_Store"
-        ]
-      },
-      {
-        "from": "build/chess-topper-icon.png",
-        "to": "app-icon.png"
-      }
-    ],
-    "protocols": [
-      {
-        "name": "Chess Topper OAuth",
-        "schemes": [
-          "chesstopper",
-          "chessist"
-        ]
-      }
-    ],
-    "win": {
-      "target": [
-        "nsis"
-      ],
-      "artifactName": "Chess-Topper-${version}-${arch}.${ext}",
-      "extraResources": [
-        {
-          "from": "build/worker/bun-ws-worker.exe",
-          "to": "bun-ws-worker.exe"
-        },
-        {
-          "from": "extension",
-          "to": "extension",
-          "filter": [
-            "**/*",
-            "!**/.DS_Store"
-          ]
-        },
-        {
-          "from": "firefox",
-          "to": "firefox",
-          "filter": [
-            "**/*",
-            "!**/.DS_Store"
-          ]
-        },
-        {
-          "from": "overlay/bin/Release/net48/ChessTopperOverlay.exe",
-          "to": "overlay/ChessTopperOverlay.exe"
-        },
-        {
-          "from": "build/chess-topper-icon.png",
-          "to": "app-icon.png"
-        }
-      ],
-      "icon": "build/chess-topper-icon.ico"
-    },
-    "mac": {
-      "target": [
-        "dmg"
-      ],
-      "artifactName": "Chess-Topper-Local-${version}-${arch}.${ext}",
-      "icon": "build/chess-topper-icon.png"
-    },
-    "linux": {
-      "target": [
-        "AppImage",
-        "deb"
-      ],
-      "category": "Game",
-      "artifactName": "Chess-Topper-Local-${version}-${arch}.${ext}",
-      "maintainer": "Official Knightly <noreply@github.com>",
-      "icon": "build/chess-topper-icon.png"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "artifactName": "Chess-Topper-${version}-${arch}.${ext}"
-    },
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "official-knightly",
-        "repo": "Chess-topper-app-",
-        "releaseType": "release"
-      }
-    ]
+    "vite": "6.3.5"
   }
 }

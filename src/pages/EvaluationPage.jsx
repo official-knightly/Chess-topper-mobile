@@ -1,6 +1,6 @@
 import EvalPanel from '../components/EvalPanel'
 import Board from '../components/Board'
-import knightLogo from '../assets/chess-topper-knight.svg'
+import knightLogo from '../../logo.png'
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 const piecesKey = (fen) => (fen ? fen.split(' ')[0] : '')

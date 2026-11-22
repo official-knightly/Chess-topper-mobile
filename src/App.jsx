@@ -6,35 +6,44 @@ import { IconEval, IconSetup } from './components/icons'
 import ChessistSettings from './components/ChessistSettings'
 import EvaluationPage from './pages/EvaluationPage'
 import SetupPage from './pages/SetupPage'
+import MobileSetupPage from './pages/MobileSetupPage'
+import AppsPage from './pages/AppsPage'
 import AboutPage from './pages/AboutPage'
+import MobileAboutPage from './pages/MobileAboutPage'
 import logo from './assets/chess-topper-knight.svg'
 
+const isMobile = window.chessist?.isMobile === true
 const piecesKey = (fen) => (fen ? fen.split(' ')[0] : '')
 const brand = {
   name: 'Chess Topper',
-  caption: 'Desktop analysis',
+  caption: isMobile ? 'Mobile assistant' : 'Desktop analysis',
   mark: <img src={logo} alt="" width={24} height={24} style={{ display: 'block', objectFit: 'contain' }} />,
 }
 const navigation = [
   { id: 'evaluation', label: 'Evaluation', icon: <IconEval aria-hidden="true" /> },
+  { id: 'apps', label: 'Apps', icon: <Icon name="home" /> },
   { id: 'setup', label: 'Setup', icon: <IconSetup aria-hidden="true" /> },
   { id: 'about', label: 'About', icon: <Icon name="info" /> },
   { id: 'settings', label: 'Settings', icon: <Icon name="settings" /> },
 ]
 
-const windowControls = {
+const windowControls = !isMobile ? {
   minimize: () => window.chessist.minimizeWindow(),
   toggleMaximize: () => window.chessist.maximizeWindow(),
   close: () => window.chessist.closeWindow(),
   isMaximized: () => window.chessist.isWindowMaximized(),
   onMaximizedChange: callback => window.chessist.onWindowMaximizedChange(callback),
-}
+} : undefined
 
 export default function App() {
-  const [status, setStatus] = useState({ stockfishOk: false, stockfishState: 'starting', overlayOk: false, extensionConnected: false, extensionUpdateAvailable: false, chessConnected: false, chessSite: null, message: '' })
+  const [status, setStatus] = useState({
+    stockfishOk: false, stockfishState: isMobile ? 'idle' : 'starting',
+    overlayOk: false, extensionConnected: false, extensionUpdateAvailable: false,
+    chessConnected: false, chessSite: null, message: '',
+  })
   const [ev, setEv] = useState(null)
   const [autoMoveStatus, setAutoMoveStatus] = useState(null)
-  const [pos, setPos] = useState(null)        // { fen, flipped } — authoritative current position
+  const [pos, setPos] = useState(null)
   const [page, setPage] = useState('evaluation')
   const [updateStatus, setUpdateStatus] = useState(null)
   const [settings, setSettings] = useState({ game: null, engine: null })
@@ -42,6 +51,9 @@ export default function App() {
   const [settingsLoadError, setSettingsLoadError] = useState('')
   const [shortcutIds, setShortcutIds] = useState(null)
   const [shortcutError, setShortcutError] = useState('')
+  const [overlayEnabled, setOverlayEnabled] = useState(false)
+  const [currentTarget, setCurrentTarget] = useState(null)
+  const [overlayPermissionNeeded, setOverlayPermissionNeeded] = useState(false)
   const settingWrites = useRef(new Map())
   const posRef = useRef(null)
 
@@ -60,6 +72,15 @@ export default function App() {
     }).catch(() => {
       if (mounted) setShortcutError('Could not load shortcuts.')
     })
+
+    if (isMobile) {
+      Promise.all([api.getOverlayState(), api.getCurrentTarget()]).then(([overlay, target]) => {
+        if (!mounted) return
+        setOverlayEnabled(!!overlay?.enabled)
+        setOverlayPermissionNeeded(!!overlay?.enabled && !overlay?.accessibilityEnabled)
+        setCurrentTarget(target || null)
+      }).catch(() => {})
+    }
     return () => { mounted = false }
   }, [])
 
@@ -69,7 +90,7 @@ export default function App() {
     const write = scope === 'game' ? api.setGameOption : api.setEngineOption
     const field = `${scope}.${key}`
     const request = Symbol(field)
-    const previousValue = settings[scope][key]
+    const previousValue = settings[scope]?.[key]
     const update = (nextValue) => setSettings(previous => ({
       ...previous, [scope]: { ...previous[scope], [key]: nextValue },
     }))
@@ -102,41 +123,67 @@ export default function App() {
     })
   }
 
+  async function toggleOverlay() {
+    if (!isMobile) return
+    setSettingsError('')
+    try {
+      const next = !overlayEnabled
+      const state = await window.chessist.setOverlayEnabled(next)
+      setOverlayEnabled(!!state?.enabled)
+      setOverlayPermissionNeeded(!!next && !state?.accessibilityEnabled)
+      if (next && !state?.accessibilityEnabled) {
+        setPage('setup')
+      }
+    } catch (error) {
+      setSettingsError(error?.message || 'Could not change overlay state.')
+    }
+  }
+
   useEffect(() => {
-    window.chessist.getStatus().then(setStatus)
-    const offS = window.chessist.onStatus((nextStatus) => {
+    let mounted = true
+    const api = window.chessist
+    api.getStatus().then(value => mounted && setStatus(value))
+    const offS = api.onStatus((nextStatus) => {
       setStatus(nextStatus)
       if (nextStatus.stockfishState !== 'ready') setEv(null)
       if (!nextStatus.chessConnected) setAutoMoveStatus(null)
     })
-    const offP = window.chessist.onPosition?.((p) => {
+    const offP = api.onPosition?.((p) => {
       posRef.current = p
       setPos(previous => previous?.fen === p?.fen && previous?.flipped === p?.flipped ? previous : p)
     })
-    const offE = window.chessist.onEval((e) => {
-      // Ignore speculative / stale evals — only show ones for the current board.
+    const offE = api.onEval((e) => {
       const cur = posRef.current?.fen
       if (cur && e.fen && piecesKey(e.fen) !== piecesKey(cur)) return
       setEv(e)
     })
-    const offMove = window.chessist.onAutoMoveStatus?.(setAutoMoveStatus)
-    // Auto-check for updates on launch.
-    window.chessist.checkUpdate?.().then(setUpdateStatus).catch(() => {})
-    return () => { offS(); offE(); offP?.(); offMove?.() }
+    const offMove = api.onAutoMoveStatus?.(setAutoMoveStatus)
+    const offOverlay = api.onOverlayChanged?.(state => {
+      setOverlayEnabled(!!state?.enabled)
+      setOverlayPermissionNeeded(!!state?.enabled && !state?.accessibilityEnabled)
+    })
+    const offTarget = api.onTargetChanged?.(setCurrentTarget)
+    if (!isMobile) api.checkUpdate?.().then(setUpdateStatus).catch(() => {})
+    return () => {
+      mounted = false
+      offS?.(); offE?.(); offP?.(); offMove?.(); offOverlay?.(); offTarget?.()
+    }
   }, [])
 
   const updateAvailable = !!updateStatus?.available
-  const engineReady = status.stockfishOk && status.extensionConnected
+  const engineReady = isMobile ? overlayEnabled : status.stockfishOk && status.extensionConnected
+  const currentTargetLabel = currentTarget?.label || currentTarget?.packageName || ''
 
   return (
-    <DesktopShell brand={brand} items={navigation} page={page} onNavigate={setPage} windowControls={windowControls}
+    <DesktopShell brand={brand} items={navigation} page={page} onNavigate={setPage}
+      windowControls={windowControls}
       sidebarTools={<SidebarShortcuts settings={settings} shortcutIds={shortcutIds} shortcutError={shortcutError}
         onSettingChange={changeSetting} onShortcutsChange={changeShortcuts} />}
       sidebarFooter={<div className="workspace">
         <span className="workspace-avatar chessist-connection" data-ready={engineReady} aria-hidden="true"><span /></span>
         <div className="workspace-copy">
-          <strong>{engineReady ? 'Ready' : 'Setup'}</strong>
-          <span>{status.extensionConnected ? 'Extension connected' : 'Extension disconnected'}</span>
+          <strong>{isMobile ? (overlayEnabled ? 'Overlay enabled' : 'Overlay off') : (engineReady ? 'Ready' : 'Setup')}</strong>
+          <span>{isMobile ? (currentTargetLabel || 'Choose chess apps') : (status.extensionConnected ? 'Extension connected' : 'Extension disconnected')}</span>
         </div>
       </div>}
       banner={<>
@@ -144,20 +191,30 @@ export default function App() {
           <span>A new version is available.</span>
           <button type="button" className="button button-primary" onClick={() => setPage('about')}>View update</button>
         </div>}
-        {status.message && page !== 'setup' && <div className="chessist-banner chessist-banner--status">{status.message}</div>}
+        {!isMobile && status.message && page !== 'setup' && <div className="chessist-banner chessist-banner--status">{status.message}</div>}
+        {isMobile && overlayPermissionNeeded && page !== 'setup' && (
+          <button type="button" className="chessist-banner mobile-permission-banner" onClick={() => setPage('setup')}>
+            Allow Chess Topper accessibility access to show the floating button.
+          </button>
+        )}
       </>}
     >
       <div key={page} className={page === 'evaluation' ? 'chessist-evaluation' : undefined}>
         {page === 'evaluation' && <EvaluationPage ev={ev} pos={pos} status={status} gameSettings={settings.game}
-          autoMoveStatus={autoMoveStatus} onOpenSetup={() => setPage('setup')} />}
-        {page === 'setup' && <SetupPage status={status} />}
+          autoMoveStatus={autoMoveStatus} onOpenSetup={() => setPage('setup')}
+          overlayEnabled={overlayEnabled} currentTarget={currentTarget}
+          onToggleOverlay={toggleOverlay} onOpenApps={() => setPage('apps')} />}
+        {page === 'apps' && <AppsPage />}
+        {page === 'setup' && (isMobile
+          ? <MobileSetupPage onOpenApps={() => setPage('apps')} />
+          : <SetupPage status={status} />)}
         {page === 'settings' && <ChessistSettings gameSettings={settings.game} engineSettings={settings.engine}
           onGameChange={(key, value) => changeSetting('game', key, value)}
           onEngineChange={(key, value) => changeSetting('engine', key, value)}
           loadError={settingsLoadError} />}
-      </div>
-      <div hidden={page !== 'about'}>
-        <AboutPage updateStatus={updateStatus} onUpdateStatus={setUpdateStatus} />
+        {page === 'about' && (isMobile
+          ? <MobileAboutPage />
+          : <AboutPage updateStatus={updateStatus} onUpdateStatus={setUpdateStatus} />)}
       </div>
       {settingsError && (
         <div role="alert" style={{

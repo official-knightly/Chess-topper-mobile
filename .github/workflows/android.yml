@@ -87,7 +87,7 @@ jobs:
           name: Chess Topper Mobile — Latest Android APK
           target_commitish: ${{ github.sha }}
           body: |
-            Installable Android APK for Chess Topper Mobile.
+            Installable Android APK for Chess Topper Mobile.\n\n            Version: 1.0.1
 
             This is an Android-only release. Install the APK on an Android phone.
             Floating controls are intended for training, puzzles and post-game analysis,

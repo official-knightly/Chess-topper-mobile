@@ -155,7 +155,7 @@ public class ChessTopperMobilePlugin extends Plugin {
         }
         prefs().edit().putString("shortcuts", cleaned.toString()).apply();
         JSObject result = new JSObject();
-        result.put("ids", new JSArray(cleaned));
+        result.put("ids", toJsArray(cleaned));
         call.resolve(result);
     }
 
@@ -170,6 +170,14 @@ public class ChessTopperMobilePlugin extends Plugin {
     private boolean contains(JSONArray array, String value) {
         for (int i = 0; i < array.length(); i++) if (value.equals(array.optString(i))) return true;
         return false;
+    }
+
+    private JSArray toJsArray(JSONArray source) {
+        JSArray result = new JSArray();
+        if (source != null) {
+            for (int i = 0; i < source.length(); i++) result.put(source.opt(i));
+        }
+        return result;
     }
 
     private JSONArray readArray(String key, String fallback) {

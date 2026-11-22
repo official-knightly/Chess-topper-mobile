@@ -1,0 +1,353 @@
+const { spawn } = require('child_process')
+const os = require('os')
+
+const MAX_ENGINE_RESTARTS = 3
+
+function diagnosticReason(startupError, output) {
+  // Stockfish can echo the full position or a local path in its error output.
+  // Export only descriptions we provide, even when Stockfish includes a reason.
+  if (startupError) return startupError.startsWith('Stockfish could not start')
+    ? 'Stockfish could not start'
+    : 'Stockfish did not respond during startup'
+  if (/allocat\w*[^\r\n]*(?:transposition table|hash memory)/i.test(output)) return 'Stockfish could not allocate hash memory'
+  if (/invalid fen|unsupported position/i.test(output)) return 'Stockfish rejected a board position'
+  if (/\b(?:evaluation network|network (?:evaluation parameters|file)|nnue)\b/i.test(output)) return 'Stockfish could not load its evaluation network'
+  if (/\bnuma\b|thread affinity/i.test(output)) return 'Stockfish could not configure processor affinity'
+  return output.trim() ? 'Stockfish reported an unrecognized error' : 'Stockfish gave no error details'
+}
+
+function parseInfoLine(line) {
+  const out = {}
+  const depth = line.match(/\bdepth (\d+)/);            if (depth) out.depth = +depth[1]
+  const mpv = line.match(/\bmultipv (\d+)/);            if (mpv) out.multipv = +mpv[1]
+  const mate = line.match(/\bscore mate (-?\d+)/)
+  const cp = line.match(/\bscore cp (-?\d+)/)
+  if (mate) out.mate = +mate[1]
+  else if (cp) out.cp = +cp[1]
+  const nps = line.match(/\bnps (\d+)/);                if (nps) out.nps = +nps[1]
+  const pv = line.match(/ pv (.+)$/)
+  if (pv) { out.pv = pv[1].trim().split(/\s+/); out.bestMove = out.pv[0] }
+  return (out.cp !== undefined || out.mate !== undefined) ? out : null
+}
+
+function defaultHashMb() {
+  const freeMb = Math.floor(os.totalmem() / (1024 * 1024))
+  return Math.max(128, Math.min(1024, Math.floor(freeMb / 8)))
+}
+
+function engineSettingsDefaults(opts = {}) {
+  return {
+    skillLevel: opts.skillLevel ?? 20,
+    limitStrength: opts.limitStrength ?? false,
+    elo: opts.elo ?? 1500,
+    threads: opts.threads || Math.max(1, os.cpus().length - 1),
+    hash: opts.hashMb || defaultHashMb(),
+  }
+}
+
+class Engine {
+  constructor(onEval, onStatus, opts = {}) {
+    this.onEval = onEval
+    this.onStatus = onStatus
+    this.onDiagnostic = opts.onDiagnostic
+    this.proc = null
+    this.ready = false
+    this.depth = 18
+    this.multipv = 1
+    this.curFen = null
+    this.pvSlots = {}
+    this._searching = false
+    this._stopping = false
+    this._newGamePending = false
+    this._path = null         // stockfish path (for auto-restart)
+    this._intentional = false // suppress restart on deliberate kill
+    this._restarts = 0        // bounded auto-restart counter
+    this._restartTimer = null
+    this._lastRequest = null  // replay after startup or an engine restart
+    this._pendingOptions = new Map()
+    // Engine settings owned by the desktop app (Engine page). Re-applied on every
+    // (re)start so they persist across engine restarts. Depth/MultiPV stay
+    // extension-driven and are NOT stored here.
+    this.settings = engineSettingsDefaults(opts)
+    this.hashMb = this.settings.hash
+    this.threads = this.settings.threads
+  }
+
+  _diagnostic(event, details = {}) {
+    if (!this.onDiagnostic) return
+    try { this.onDiagnostic({ event, ...details }) } catch { /* Diagnostics must not interrupt analysis. */ }
+  }
+
+  start(stockfishPath) {
+    if (this.proc) return
+    if (stockfishPath) {
+      this._path = stockfishPath
+      this._restarts = 0
+    }
+    clearTimeout(this._restartTimer)
+    this._intentional = false
+    this.ready = false
+    this.multipv = 1
+    this._pendingOptions.clear()
+    this._diagnostic('engine_start', {
+      threads: Number.isSafeInteger(this.threads) ? this.threads : null,
+      hash: Number.isSafeInteger(this.hashMb) ? this.hashMb : null,
+    })
+    if (!this._restarts) this.onStatus?.({ status: 'starting', message: 'Stockfish: starting…' })
+    let proc
+    try {
+      proc = spawn(this._path, [], { windowsHide: true })
+    } catch (error) {
+      const message = `Stockfish could not start: ${error.code || error.message}`
+      this._diagnostic('engine_start_failed', { reason: 'Stockfish could not start' })
+      this.onStatus?.({ status: 'error', message })
+      return
+    }
+    this.proc = proc
+    let startupError
+    let stderr = ''
+    let uciError = ''
+    let reachedReady = false
+    const startupTimer = setTimeout(() => {
+      if (this.proc !== proc || this.ready || this._intentional) return
+      startupError = 'Stockfish did not respond during startup'
+      proc.kill()
+    }, 30000)
+    proc.stdout.setEncoding('utf8')
+    proc.stderr.setEncoding('utf8')
+    proc.stderr.on('data', chunk => { stderr = (stderr + chunk).slice(-2048) })
+    let buf = ''
+    function captureUciError(line) {
+      const error = /^info string ((?:CRITICAL )?ERROR: .+)/i.exec(line)
+      if (error) uciError = (uciError + ' ' + error[1]).slice(0, 2048)
+    }
+    proc.stdout.on('data', (chunk) => {
+      if (this.proc !== proc || this._intentional) return
+      buf += chunk
+      let i
+      while ((i = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, i).trim()
+        buf = buf.slice(i + 1)
+        captureUciError(line)
+        if (line === 'readyok' && !reachedReady) {
+          reachedReady = true
+          clearTimeout(startupTimer)
+          this._diagnostic('engine_ready')
+        }
+        this._handle(line)
+      }
+    })
+    // Swallow stream errors (e.g. EPIPE when Stockfish dies mid-write) so they
+    // never become an uncaught exception that crashes the app.
+    proc.on('error', (e) => { startupError ||= `Stockfish could not start: ${e.code || e.message}` })
+    proc.stdin.on('error', () => {})
+    proc.stdout.on('error', () => {})
+    proc.stderr.on('error', () => {})
+    proc.once('close', (code) => {
+      clearTimeout(startupTimer)
+      if (this.proc !== proc) return
+      const phase = this._searching ? 'searching' : reachedReady ? 'idle' : 'starting'
+      this.ready = false
+      this._searching = false
+      this._stopping = false
+      this._newGamePending = false
+      this.proc = null
+      if (this._intentional) return
+      captureUciError(buf.trim())
+      const exit = startupError || `Stockfish exited${code === null ? '' : ` (code ${code})`}`
+      const detail = (uciError || stderr).replace(/[\x00-\x1F\x7F]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 400)
+      const message = detail ? `${exit}. ${detail}` : `${exit}.`
+      this._diagnostic('engine_exit', { code, phase, reason: diagnosticReason(startupError, uciError || stderr) })
+      if (!startupError && this._path && this._restarts < MAX_ENGINE_RESTARTS) {
+        this._restarts++
+        this._restartTimer = setTimeout(() => this.start(), 1200)
+        this._diagnostic('engine_retry', { attempt: this._restarts })
+        this.onStatus?.({ status: 'retrying', message: `${message} Restarting Stockfish…` })
+      } else {
+        this.onStatus?.({ status: 'error', message })
+      }
+    })
+    this._send('uci')
+  }
+
+  _send(cmd) {
+    const p = this.proc
+    if (!p || !p.stdin || !p.stdin.writable) return
+    try { p.stdin.write(cmd + '\n') } catch {}
+  }
+
+  _handle(line) {
+    if (line === 'uciok') {
+      this._applySettings()
+      this._send('setoption name MultiPV value 1')
+      this._send('isready')
+      return
+    }
+    if (line === 'readyok') {
+      if (this.ready) return
+      this.ready = true
+      this.onStatus?.({ status: 'ready', message: 'Engine ready' })
+      if (this._lastRequest) this._search(this._lastRequest)
+      return
+    }
+    if (line.startsWith('info depth')) {
+      if (!this._searching || this._stopping) return
+      const ev = parseInfoLine(line)
+      if (ev) this._lastInfo = ev   // keep the latest, incl. depth-0 lines (checkmate reports mate 0)
+      if (!ev || (ev.depth || 0) < 5) return
+      const slot = ev.multipv || 1
+      this.pvSlots[slot] = ev
+      if (slot !== 1) return
+      ev.fen = this.curFen
+      ev.turn = this.curFen ? (this.curFen.split(' ')[1] || 'w') : 'w'
+      ev.multiPvMoves = [1, 2, 3].map(i => this.pvSlots[i]?.pv?.[0]).filter(Boolean)
+      this.onEval?.(ev)
+      return
+    }
+    // Stockfish answers a finished position with no legal move. `score mate 0`
+    // (side to move is in check) → checkmate; otherwise → stalemate/draw.
+    if (line.startsWith('bestmove')) {
+      if (!this._searching) return
+      this._searching = false
+      if (this._stopping) {
+        this._stopping = false
+        for (const [name, value] of this._pendingOptions) this.setOption(name, value)
+        this._pendingOptions.clear()
+        if (this._newGamePending) this._resetGame()
+        else if (this._lastRequest) this._search(this._lastRequest)
+        return
+      }
+      if (this._restarts) this._diagnostic('engine_recovered', { attempt: this._restarts })
+      this._restarts = 0
+      const move = line.split(/\s+/)[1]
+      if (move === '(none)' || move === '0000') {
+        const turn = this.curFen ? (this.curFen.split(' ')[1] || 'w') : 'w'
+        const mated = this._lastInfo && this._lastInfo.mate === 0
+        this.onEval?.({
+          fen: this.curFen,
+          turn,
+          gameOver: mated ? 'checkmate' : 'stalemate',
+          // For checkmate, the side to move is mated → the other side wins.
+          winner: mated ? (turn === 'w' ? 'b' : 'w') : null,
+        })
+      }
+    }
+  }
+
+  evaluate(fen, depth, multipv, force = false) {
+    if (!fen) return
+    this._lastRequest = {
+      fen,
+      depth: depth || this.depth,
+      multipv: multipv || this.multipv,
+    }
+    if (!this.ready) return
+    if (this._searching) {
+      const request = this._lastRequest
+      const duplicate = fen === this.curFen && request.depth === this.depth && request.multipv === this.multipv
+      if (!duplicate || force) this._stopSearch()
+      return
+    }
+    this._search(this._lastRequest)
+  }
+
+  _search({ fen, depth, multipv }) {
+    this.depth = depth
+    if (multipv !== this.multipv) {
+      this.multipv = multipv
+      this._send(`setoption name MultiPV value ${multipv}`)
+    }
+    this.curFen = fen
+    this.pvSlots = {}
+    this._lastInfo = null
+    this._searching = true
+    this._send('position fen ' + fen)
+    this._send('go depth ' + this.depth)
+  }
+
+  newGame() {
+    this._lastRequest = null
+    if (!this.ready) return
+    if (this._searching) {
+      this._newGamePending = true
+      this._stopSearch()
+      return
+    }
+    this._resetGame()
+  }
+
+  _resetGame() {
+    this._newGamePending = false
+    this.ready = false
+    this.curFen = null
+    this.pvSlots = {}
+    this._send('ucinewgame')
+    this._send('isready')
+  }
+
+  setOption(name, value) {
+    if (this._searching) {
+      // Stockfish waits for the search to finish before handling setoption.
+      this._pendingOptions.set(name, value)
+      this._stopSearch()
+      return
+    }
+    this._send(`setoption name ${name} value ${value}`)
+  }
+
+  // Send all app-owned settings to the engine (called on each uciok).
+  _applySettings() {
+    const s = this.settings
+    this._send(`setoption name Threads value ${s.threads}`)
+    this._send(`setoption name Hash value ${s.hash}`)
+    this._send(`setoption name Skill Level value ${s.skillLevel}`)
+    this._send(`setoption name UCI_LimitStrength value ${s.limitStrength ? 'true' : 'false'}`)
+    if (s.limitStrength) this._send(`setoption name UCI_Elo value ${s.elo}`)
+  }
+
+  getSettings() { return { ...this.settings } }
+
+  // Update one app-owned setting; applies live and persists for the next restart.
+  applySetting(key, value) {
+    if (!Object.hasOwn(this.settings, key) || this.settings[key] === value) return
+    this.settings[key] = value
+    if (key === 'threads') this.threads = value
+    if (key === 'hash') this.hashMb = value
+    if ((key === 'threads' || key === 'hash') && Number.isSafeInteger(value)) this._diagnostic('engine_settings', { [key]: value })
+    switch (key) {
+      case 'skillLevel':    this.setOption('Skill Level', value); break
+      case 'limitStrength': this.setOption('UCI_LimitStrength', value ? 'true' : 'false')
+                            if (value) this.setOption('UCI_Elo', this.settings.elo); break
+      case 'elo':           if (!this.settings.limitStrength) return
+                            this.setOption('UCI_Elo', value); break
+      case 'threads':       this.setOption('Threads', value); break
+      case 'hash':          this.setOption('Hash', value); break
+    }
+    if (this.ready && !this._searching && this._lastRequest) this._search(this._lastRequest)
+  }
+
+  stop() {
+    this._lastRequest = null
+    this._stopSearch()
+  }
+
+  _stopSearch() {
+    if (!this._searching || this._stopping) return
+    this._stopping = true
+    this._send('stop')
+  }
+
+  kill() {
+    this._intentional = true
+    this.ready = false
+    clearTimeout(this._restartTimer)
+    const proc = this.proc
+    if (!proc) return Promise.resolve()
+    return new Promise((resolve, reject) => {
+      proc.once('close', resolve)
+      try { proc.kill() } catch (e) { reject(e) }
+    })
+  }
+}
+
+module.exports = { parseInfoLine, defaultHashMb, engineSettingsDefaults, Engine }

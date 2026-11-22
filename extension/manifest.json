@@ -1,0 +1,88 @@
+{
+  "manifest_version": 3,
+  "name": "Chess Topper",
+  "version": "3.0.6",
+  "description": "Chess Topper companion for Chess.com, Lichess, and World Chess live-game analysis and move assistance.",
+  "permissions": [
+    "storage",
+    "tabs",
+    "scripting",
+    "alarms",
+    "debugger"
+  ],
+  "host_permissions": [
+    "https://www.chess.com/*",
+    "https://lichess.org/*",
+    "ws://127.0.0.1/*",
+    "https://worldchess.com/*",
+    "https://www.worldchess.com/*"
+  ],
+  "background": {
+    "service_worker": "src/background/service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.chess.com/*"
+      ],
+      "js": [
+        "src/content/move-observer.js",
+        "src/content/content.js"
+      ],
+      "css": [
+        "src/content/content.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://lichess.org/*"
+      ],
+      "js": [
+        "src/content/move-observer.js",
+        "src/content/lichess.js"
+      ],
+      "css": [
+        "src/content/content.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://worldchess.com/*",
+        "https://www.worldchess.com/*"
+      ],
+      "js": [
+        "src/content/move-observer.js",
+        "src/content/worldchess.js"
+      ],
+      "css": [
+        "src/content/content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon128.png",
+      "48": "icons/icon128.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon128.png",
+    "48": "icons/icon128.png",
+    "128": "icons/icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+export const PLATFORM_METHODS=["getProfile","getRatings","getRecentGames","getGamePGN"];
+export function createPlatformAdapter(service){for(const method of PLATFORM_METHODS){if(typeof service?.[method]!=="function")throw new TypeError("Platform adapter missing "+method);}return Object.freeze({getProfile:(...a)=>service.getProfile(...a),getRatings:(...a)=>service.getRatings(...a),getRecentGames:(...a)=>service.getRecentGames(...a),getGamePGN:(...a)=>service.getGamePGN(...a)});}
+export function createPlatformAdapters({lichess,chesscom,worldchess}){return {lichess:createPlatformAdapter(lichess),chesscom:createPlatformAdapter(chesscom),worldchess:createPlatformAdapter(worldchess)};}

@@ -7,16 +7,36 @@ export default function AppsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+
+  async function loadApps(showSpinner = true) {
+    if (showSpinner) setRefreshing(true)
+    setError('')
+    try {
+      const [installed, chosen] = await Promise.all([
+        window.chessist.getInstalledApps(),
+        window.chessist.getSelectedApps(),
+      ])
+      setApps(Array.isArray(installed) ? installed.filter(app => app?.packageName) : [])
+      setSelected(Array.isArray(chosen) ? chosen : [])
+    } catch (failure) {
+      setError(failure?.message || 'Could not read installed apps. Check permissions and try again.')
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }
 
   useEffect(() => {
     let active = true
     Promise.all([window.chessist.getInstalledApps(), window.chessist.getSelectedApps()])
       .then(([installed, chosen]) => {
         if (!active) return
-        setApps(Array.isArray(installed) ? installed : [])
+        setApps(Array.isArray(installed) ? installed.filter(app => app?.packageName) : [])
         setSelected(Array.isArray(chosen) ? chosen : [])
+        setError('')
       })
-      .catch(() => active && setError('Could not read installed apps. Open this page again to retry.'))
+      .catch(failure => active && setError(failure?.message || 'Could not read installed apps. Tap Retry.'))
       .finally(() => active && setLoading(false))
     return () => { active = false }
   }, [])
@@ -49,6 +69,7 @@ export default function AppsPage() {
       <header className="page-heading">
         <h1>Chess apps</h1>
         <p>Choose the apps where the Chess Topper floating button should appear.</p>
+        <button className="button button-plain" type="button" disabled={loading || refreshing} onClick={() => loadApps()}>{refreshing ? 'Refreshing…' : 'Refresh apps'}</button>
       </header>
       <section className="mobile-info-card">
         <strong>{selected.length} app{selected.length === 1 ? '' : 's'} selected</strong>
@@ -60,7 +81,8 @@ export default function AppsPage() {
           type="search" placeholder="Chess.com, Lichess…" />
       </label>
       {loading && <p className="mobile-muted" role="status">Loading installed apps…</p>}
-      {!loading && !filtered.length && <p className="mobile-muted">No matching launchable apps were found.</p>}
+      {!loading && error && <button className="button button-plain" type="button" onClick={() => loadApps()}>Retry loading apps</button>}
+      {!loading && !error && !filtered.length && <p className="mobile-muted">No matching launchable apps were found. Try refreshing the list.</p>}
       <div className="mobile-app-list">
         {filtered.map(app => {
           const packageName = app.packageName

@@ -99,8 +99,42 @@ window.chessist = {
   onOverlayChanged:listen('overlayChanged'),
   onTargetChanged:listen('targetChanged'),
   onUpdateLog:noop,
-  checkUpdate:async()=>({unsupported:true,error:'In-app updates are not available in this mobile build.'}),
-  applyUpdate:async()=>({ok:false,error:'Install a newer Android build to update Chess Topper.'}),
+  checkUpdate:async()=>{
+    const response = await fetch('https://api.github.com/repos/official-knightly/Chess-topper-mobile/releases/tags/mobile-latest', {
+      headers: { Accept: 'application/vnd.github+json' },
+      cache: 'no-store',
+    })
+    if (!response.ok) throw new Error(response.status === 404 ? 'No Android release has been published yet.' : 'Could not check for Android updates.')
+    const release = await response.json()
+    const asset = (release.assets || []).find(item => /\\.apk$/i.test(item.name))
+    const latestVersion = String(release.tag_name || release.name || '').replace(/^mobile-v?/i, '').replace(/^v/i, '')
+    const currentVersion = '1.0.0'
+    const parts = value => (value.match(/\\d+/g) || ['0']).map(Number)
+    const a = parts(latestVersion), c = parts(currentVersion)
+    let newer = false
+    for (let i = 0; i < Math.max(a.length, c.length); i++) {
+      if ((a[i] || 0) !== (c[i] || 0)) { newer = (a[i] || 0) > (c[i] || 0); break }
+    }
+    return {
+      available: newer && !!asset,
+      currentVersion,
+      latestVersion,
+      releaseName: release.name || 'Chess Topper Mobile update',
+      notes: release.body || '',
+      publishedAt: release.published_at || null,
+      downloadUrl: asset?.browser_download_url || release.html_url,
+      releaseUrl: release.html_url,
+      assetName: asset?.name || null,
+      checkedAt: new Date().toISOString(),
+    }
+  },
+  applyUpdate:async status=>{
+    const url = status?.downloadUrl || status?.releaseUrl
+    if (!url) return { ok:false, error:'No Android update download is available.' }
+    if (isNative) await call('openExternal',{url})
+    else window.open(url,'_blank','noopener,noreferrer')
+    return { ok:true, opened:true }
+  },
   getBeta:async()=>false,
   setBeta:async()=>false,
   toggleDevTools:async()=>false,

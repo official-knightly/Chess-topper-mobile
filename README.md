@@ -1,69 +1,53 @@
-<p align="center"><img src="src/assets/chess-topper-wordmark.png" alt="Chess Topper" width="520"></p>
-<h1 align="center">Chess Topper</h1>
-<p align="center">A native desktop chess analysis companion for Chess.com and Lichess, with live World Chess game support.</p>
+<p align="center"><img src="src/assets/chess-topper-wordmark.png" alt="Chess Topper" width="420"></p>
 
-## Chess Topper v1.0.6
+<h1 align="center">Chess Topper Mobile</h1>
 
-Chess Topper brings engine analysis, board evaluation, and move assistance into a focused desktop app. The companion browser extension reads supported live chess boards and connects them to the desktop engine. The installed desktop app includes complete, non-empty Chrome/Chromium and Firefox extension folders.
+<p align="center">Android companion app with the familiar Chess Topper interface, configurable quick settings and a floating knight control.</p>
 
-### Highlights
-- World Chess live-game board analysis and move assistance through the browser extension, using the same desktop overlay and engine connection.
-- Native Stockfish analysis with persistent engine sessions.
-- Live board position, evaluation, depth, best move and analysis arrows in the desktop app.
-- Overlay, in-page and desktop-app rendering modes.
-- Configurable move assistance and timing controls.
-- Lichess account connection, game monitoring and challenge/seek API support.
-- Chess.com and Lichess live-board integration through the browser extension.
-- World Chess live-game board analysis and move assistance.
-- In-app update checking for supported Windows installer builds.
+## Mobile experience
 
-**Lichess gameplay note:** live-board analysis and move assistance require opening the Lichess game in a supported browser and loading the Chess Topper extension. The desktop app does not currently provide a standalone embedded Lichess online-play board.
+- The hamburger menu in the top-left opens Evaluation, Chess apps, Setup, About and Settings.
+- Evaluation keeps the chessboard and has an **Overlay app** panel directly below it.
+- Select installed apps such as Chess.com or Lichess from **Chess apps**. You can also choose other launchable apps installed on the device.
+- Enable the floating knight from **Setup**. Android then asks you to turn on the Chess Topper accessibility service.
+- Tap the floating knight above a selected app to open the compact quick-settings panel.
+- Add controls from the existing **Add shortcuts** picker in the navigation drawer. The floating panel reads the saved shortcut list (for example ELO, depth and skill level).
 
-## Download
+## Important compatibility note
 
-Get the current Windows, macOS or Linux installer from the [Chess Topper Releases page](https://github.com/official-knightly/Chess-topper-app-/releases).
+The floating button can appear over selected apps. That does **not** mean Chess Topper can automatically read every chessboard. Live position detection, engine evaluation and board interaction require a compatible adapter for each chess app. The current mobile foundation implements app selection, foreground-app detection and quick settings; it does not claim universal live board recognition.
 
-- Windows: `.exe` installer
-- macOS: `.dmg` installer
-- Linux: `.AppImage` or `.deb`
+The accessibility service is configured to receive window-state events only and does not request access to window content, screen text or move input. Users must enable it manually in Android Accessibility settings. Android provides accessibility overlay windows specifically for accessibility services; the service is used here only to show the floating control panel.
 
-The release page contains platform installers and the update metadata required by the in-app updater. Internal worker binaries and debug files are not user downloads. Both browser-extension folders are bundled inside the installed app and can be opened from Setup.
+## Build the Android app
 
-## Setup
-
-1. Install and launch Chess Topper.
-2. Open **Setup** and follow the Browser Extension instructions.
-3. Load the bundled extension in your browser (Chrome, Brave or Edge; Firefox uses its matching extension build).
-4. Open a supported Chess.com, Lichess or World Chess live game tab.
-5. Return to Chess Topper to view the live position and engine evaluation.
-
-Stockfish is prepared by the desktop app on first launch. The transparent native overlay is currently Windows-only.
-
-## Build from source
-
-Requirements: Node.js 22+, Bun 1.4.4, and the .NET SDK needed by the Windows overlay helper.
+Requirements: Node.js 22+, Java 21, Android Studio and Android SDK.
 
 ```bash
 npm install
-npm run dev
+npm run android:setup
+npm run android:sync
+npm run android:open
 ```
 
-Platform builds:
+To build a local debug APK:
 
 ```bash
-npm run dist:win
-npm run dist:mac
-npm run dist:linux
+npm run android:build
 ```
 
-## Project layout
+The generated project is under `android/`. GitHub Actions also builds a debug APK on pushes to `main` and uploads it as the `chess-topper-android-debug` workflow artifact.
 
-- `electron/` — desktop main process, local services, engine and updater
-- `src/` — React desktop interface and pages
-- `extension/` — browser companion
-- `overlay/` — Windows overlay helper
-- `scripts/` — build and packaging helpers
+## Native architecture
 
-## Credits
+- `src/` and `ui-template/` — React interface reused from desktop Chess Topper.
+- `src/mobile/` — Capacitor bridge and mobile styles.
+- `native-android/` — native plugin, accessibility service and service configuration templates.
+- `scripts/setup-android.mjs` — generates the Capacitor Android project and copies native components.
+- `android/` — generated Android Studio project.
 
-Chess Topper is maintained by [Official Knightly](https://github.com/official-knightly). It uses [Stockfish](https://stockfishchess.org/) for chess analysis; see the repository and included notices for dependency and license details.
+## Repositories
+
+- [Chess Topper Mobile](https://github.com/official-knightly/Chess-topper-mobile)
+- [Desktop Chess Topper](https://github.com/official-knightly/Chess-topper-app-)
+

@@ -1,5 +1,6 @@
 import EvalPanel from '../components/EvalPanel'
 import Board from '../components/Board'
+import knightLogo from '../assets/chess-topper-knight.svg'
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 const piecesKey = (fen) => (fen ? fen.split(' ')[0] : '')
@@ -120,7 +121,7 @@ export default function EvaluationPage({
         <section className="mobile-overlay-card">
           <div className="mobile-overlay-heading">
             <div className="mobile-overlay-mark">
-              <img src={new URL('../assets/chess-topper-knight.svg', import.meta.url).href} alt="" />
+              <img src={knightLogo} alt="" />
             </div>
             <div className="mobile-overlay-copy">
               <strong>Overlay app</strong>

@@ -139,7 +139,7 @@ public class ChessTopperMobilePlugin extends Plugin {
     @PluginMethod
     public void getSidebarShortcuts(PluginCall call) {
         JSObject result = new JSObject();
-        result.put("ids", new JSArray(readArray("shortcuts", "[\"engine.elo\",\"game.depth\"]")));
+        result.put("ids", toJsArray(readArray("shortcuts", "[\"engine.elo\",\"game.depth\"]")));
         call.resolve(result);
     }
 
@@ -219,7 +219,7 @@ public class ChessTopperMobilePlugin extends Plugin {
     @PluginMethod
     public void getSelectedApps(PluginCall call) {
         JSObject result = new JSObject();
-        result.put("packages", new JSArray(readArray("selected_apps", "[\"com.chess\",\"org.lichess.mobileV2\"]")));
+        result.put("packages", toJsArray(readArray("selected_apps", "[\"com.chess\",\"org.lichess.mobileV2\"]")));
         call.resolve(result);
     }
 

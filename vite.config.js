@@ -16,6 +16,7 @@ export default defineConfig({
   base: './',
   define: {
     __BUILD_SHA__: JSON.stringify(gitShortSha()),
+    __APP_VERSION__: JSON.stringify(JSON.parse(require('node:fs').readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version),
   },
   server: { port: 5173, strictPort: true },
   build: { outDir: 'dist', emptyOutDir: true },

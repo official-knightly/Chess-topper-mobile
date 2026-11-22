@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Chess Topper</string>
+    <string name="title_activity_main">Chess Topper</string>
+    <string name="package_name">com.officialknightly.chesstopper.mobile</string>
+    <string name="custom_url_scheme">com.officialknightly.chesstopper.mobile</string>
+    <string name="accessibility_service_description">Detects the selected foreground app so Chess Topper can show its floating quick controls. It does not read screen content or interact with chess moves.</string>
+</resources>

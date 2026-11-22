@@ -107,7 +107,7 @@ window.chessist = {
     if (!response.ok) throw new Error(response.status === 404 ? 'No Android release has been published yet.' : 'Could not check for Android updates.')
     const release = await response.json()
     const asset = (release.assets || []).find(item => /\\.apk$/i.test(item.name))
-    const latestVersion = String((release.body || '').match(/Version:\\s*([0-9.]+)/i)?.[1] || release.tag_name || '').replace(/^mobile-v?/i, '').replace(/^v/i, '')
+    const latestVersion = String((release.body || '').match(/Version:\s*([0-9.]+)/i)?.[1] || release.tag_name || '').replace(/^mobile-v?/i, '').replace(/^v/i, '')
     const currentVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.1'
     const parts = value => (value.match(/\\d+/g) || ['0']).map(Number)
     const a = parts(latestVersion), c = parts(currentVersion)

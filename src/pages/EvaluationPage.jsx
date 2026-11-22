@@ -27,7 +27,6 @@ function AutoMoveStatus({ status }) {
   </div>
 }
 
-// Locate a side's king on the board, e.g. ('…', 'w') → 'e1'. Returns null if absent.
 function kingSquare(fen, color) {
   const target = color === 'w' ? 'K' : 'k'
   const rows = (fen || '').split(' ')[0].split('/')
@@ -44,27 +43,27 @@ function kingSquare(fen, color) {
 
 function arrowsFromEval(ev, showAltArrows) {
   const moves = (ev.multiPvMoves && ev.multiPvMoves.length) ? ev.multiPvMoves : (ev.bestMove ? [ev.bestMove] : [])
-  return moves
-    .filter(m => typeof m === 'string' && m.length >= 4)
+  return moves.filter(m => typeof m === 'string' && m.length >= 4)
     .slice(0, showAltArrows ? 3 : 1)
     .map((m, i) => ({ from: m.slice(0, 2), to: m.slice(2, 4), idx: i }))
 }
 
-export default function EvaluationPage({ ev, pos, status, gameSettings, autoMoveStatus, onOpenSetup }) {
-  const chessOn = status.chessConnected        // a chess tab is active
-  const extOn = status.extensionConnected      // extension installed (service worker)
+export default function EvaluationPage({
+  ev, pos, status, gameSettings, autoMoveStatus, onOpenSetup,
+  overlayEnabled = false, currentTarget = null, onToggleOverlay, onOpenApps,
+}) {
+  const isMobile = window.chessist?.isMobile === true
+  const chessOn = status.chessConnected
+  const extOn = status.extensionConnected
   const boardFen = pos?.fen || ev?.fen || START_FEN
   const flipped = !!pos?.flipped
   const hasPosition = !!(pos?.fen || ev?.fen)
   const analysisEnabled = gameSettings?.enabled !== false
-
   const evalMatches = ev?.fen && (!pos?.fen || piecesKey(ev.fen) === piecesKey(pos.fen))
   const showPanel = status.stockfishState === 'ready' && analysisEnabled && chessOn && hasPosition
   const showCurrentEval = showPanel && evalMatches
   const gameOver = showCurrentEval ? ev.gameOver : null
   const arrows = (showCurrentEval && !gameOver) ? arrowsFromEval(ev, gameSettings?.showAltArrows) : []
-
-  // On checkmate the side to move is mated — ring its king in red.
   const kingMark = gameOver === 'checkmate'
     ? { square: kingSquare(boardFen, ev.turn), color: 'rgb(var(--status-red))' }
     : null
@@ -77,7 +76,14 @@ export default function EvaluationPage({ ev, pos, status, gameSettings, autoMove
   let dot = 'rgb(var(--status-yellow))'
   let labelColor = 'rgb(var(--fg-muted))'
   let label, hint
-  if (STOCKFISH_LABELS[status.stockfishState]) {
+  if (isMobile) {
+    dot = overlayEnabled ? 'rgb(var(--status-green))' : 'rgb(var(--status-yellow))'
+    labelColor = 'rgb(var(--fg-muted))'
+    label = overlayEnabled ? 'Floating controls are enabled' : 'Choose a chess app to get started'
+    hint = currentTarget?.label
+      ? `Selected app in foreground: ${currentTarget.label}`
+      : 'The evaluation board is ready. Select Chess.com, Lichess, or another installed app from the menu.'
+  } else if (STOCKFISH_LABELS[status.stockfishState]) {
     label = STOCKFISH_LABELS[status.stockfishState]
     if (stockfishFailed) dot = labelColor = 'rgb(var(--status-red))'
   } else if (status.stockfishState === 'ready' && !analysisEnabled) {
@@ -94,13 +100,58 @@ export default function EvaluationPage({ ev, pos, status, gameSettings, autoMove
     hint = 'No connection. Open the Setup tab to load the extension, then open a game.'
   }
 
-  // Board greys out whenever there's no live game; fully grey when nothing is connected.
-  const boardOpacity = chessOn ? (hasPosition ? 1 : 0.5) : (extOn ? 0.6 : 0.4)
-  const boardFilter = chessOn ? (hasPosition ? 'none' : 'grayscale(0.4)') : (extOn ? 'grayscale(0.85)' : 'grayscale(1)')
+  const boardOpacity = isMobile ? 1 : chessOn ? (hasPosition ? 1 : 0.5) : (extOn ? 0.6 : 0.4)
+  const boardFilter = isMobile ? 'none' : chessOn ? (hasPosition ? 'none' : 'grayscale(0.4)') : (extOn ? 'grayscale(0.85)' : 'grayscale(1)')
+  const targetLabel = currentTarget?.label || currentTarget?.packageName || 'No selected app active'
+
+  if (isMobile) {
+    return (
+      <div className="mobile-evaluation">
+        <div className="mobile-evaluation-status">
+          <span className="mobile-status-dot" data-enabled={overlayEnabled} />
+          <span>{label}</span>
+        </div>
+
+        <div className="mobile-board-wrap" style={{ opacity: boardOpacity, filter: boardFilter }}>
+          <Board fen={boardFen} arrows={arrows} flipped={flipped} kingMark={kingMark} fill />
+          {overText && <div className="mobile-board-result">{overText}</div>}
+        </div>
+
+        <section className="mobile-overlay-card">
+          <div className="mobile-overlay-heading">
+            <div className="mobile-overlay-mark">
+              <img src={new URL('../assets/chess-topper-knight.svg', import.meta.url).href} alt="" />
+            </div>
+            <div className="mobile-overlay-copy">
+              <strong>Overlay app</strong>
+              <span>{targetLabel}</span>
+            </div>
+            <span className={overlayEnabled ? 'mobile-state mobile-state--on' : 'mobile-state'}>
+              {overlayEnabled ? 'ON' : 'OFF'}
+            </span>
+          </div>
+          <div className="mobile-overlay-actions">
+            <button type="button" className={overlayEnabled ? 'button button-primary' : 'button button-plain'}
+              onClick={onToggleOverlay}>
+              {overlayEnabled ? 'Turn overlay off' : 'Enable overlay'}
+            </button>
+            <button type="button" className="button button-plain" onClick={onOpenApps}>Choose apps</button>
+          </div>
+          <p className="mobile-footnote">
+            The floating knight opens quick settings over selected apps. Live board analysis needs a compatible app adapter; choosing an app does not automatically enable board reading.
+          </p>
+        </section>
+
+        <div className="mobile-evaluation-hint">
+          {hint}
+          {showPanel && <EvalPanel ev={ev} pending={!showCurrentEval} />}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: 16, gap: 12, overflow: 'hidden' }}>
-      {/* Keep the header mounted between a position update and its evaluation. */}
       <div style={{ flexShrink: 0 }}>
         {showPanel ? <EvalPanel ev={ev} pending={!showCurrentEval} /> : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
@@ -110,29 +161,19 @@ export default function EvaluationPage({ ev, pos, status, gameSettings, autoMove
               <button type="button" onClick={onOpenSetup} style={{
                 padding: '4px 8px', border: '1px solid rgb(var(--border))', borderRadius: 'var(--radius-sm)',
                 background: 'rgb(var(--surface))', color: 'rgb(var(--fg))', fontSize: 12, cursor: 'pointer',
-              }}>
-                Open Setup
-              </button>
+              }}>Open Setup</button>
             )}
           </div>
         )}
       </div>
-
-      {/* board fills the remaining space, kept square and bounded by both axes */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ height: '100%', maxWidth: '100%', aspectRatio: '1 / 1', position: 'relative', opacity: boardOpacity, filter: boardFilter }}>
           <Board fen={boardFen} arrows={arrows} flipped={flipped} kingMark={kingMark} fill />
-          {overText && (
-            <div style={{ position: 'absolute', left: 0, right: 0, bottom: 12, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
-              <div style={{
-                background: 'rgba(10,10,14,0.86)', color: '#fff', padding: '8px 16px', borderRadius: 'var(--radius)',
-                fontWeight: 700, fontSize: 14, border: '1px solid rgb(var(--border))', boxShadow: '0 6px 20px rgba(0,0,0,0.45)',
-              }}>{overText}</div>
-            </div>
-          )}
+          {overText && <div style={{ position: 'absolute', left: 0, right: 0, bottom: 12, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
+            <div style={{ background: 'rgba(10,10,14,0.86)', color: '#fff', padding: '8px 16px', borderRadius: 'var(--radius)', fontWeight: 700, fontSize: 14, border: '1px solid rgb(var(--border))', boxShadow: '0 6px 20px rgba(0,0,0,0.45)' }}>{overText}</div>
+          </div>}
         </div>
       </div>
-
       <div style={{ flexShrink: 0, textAlign: 'center', fontSize: 12, color: 'rgb(var(--fg-dim))', lineHeight: 1.6, minHeight: 18 }}>
         {hint}
         <AutoMoveStatus status={autoMoveStatus} />

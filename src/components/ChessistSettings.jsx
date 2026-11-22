@@ -72,7 +72,7 @@ export default function ChessistSettings({
   const groups = [
     settingsGroup('game', 'Game', gameSettings),
     settingsGroup('engine', 'Engine', engineSettings),
-    { id: 'developer', label: 'Developer', sections: [] },
+    ...(!windowApi?.isMobile ? [{ id: 'developer', label: 'Developer', sections: [] }] : []),
   ]
 
   function renderGroupContent({ id }) {

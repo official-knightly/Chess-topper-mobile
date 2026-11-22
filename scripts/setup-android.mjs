@@ -28,7 +28,7 @@ await copyFile(join(nativeRoot, 'MainActivity.java'), join(javaDir, 'MainActivit
 await copyFile(join(nativeRoot, 'ChessTopperMobilePlugin.java'), join(javaDir, 'ChessTopperMobilePlugin.java'))
 await copyFile(join(nativeRoot, 'ChessTopperAccessibilityService.java'), join(javaDir, 'ChessTopperAccessibilityService.java'))
 await copyFile(join(nativeRoot, 'chess_topper_accessibility_service.xml'), join(xmlDir, 'chess_topper_accessibility_service.xml'))
-await copyFile(join(root, 'src', 'assets', 'logo.png'), join(drawableDir, 'chess_topper_logo.png'))
+await copyFile(join(root, 'logo.png'), join(drawableDir, 'chess_topper_logo.png'))
 
 let manifest = await readFile(manifestPath, 'utf8')
 if (!manifest.includes('ChessTopperAccessibilityService')) {

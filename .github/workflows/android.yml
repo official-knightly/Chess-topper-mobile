@@ -6,6 +6,10 @@ on:
     tags: ["mobile-v*"]
   workflow_dispatch:
 
+concurrency:
+  group: chess-topper-android-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 

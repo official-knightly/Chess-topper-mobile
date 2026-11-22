@@ -71,10 +71,28 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: Upload APK
+      - name: Upload APK build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: chess-topper-android-debug
+          name: chess-topper-mobile-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
+
+      - name: Publish installable Android APK release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: mobile-latest
+          name: Chess Topper Mobile — Latest Android APK
+          target_commitish: ${{ github.sha }}
+          body: |
+            Installable Android APK for Chess Topper Mobile.
+
+            This is an Android-only release. Install the APK on an Android phone.
+            Floating controls are intended for training, puzzles and post-game analysis,
+            not assistance during live rated games.
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+          overwrite_files: true
+          make_latest: true
+          fail_on_unmatched_files: true

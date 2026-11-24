@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "305272750763",
+    "project_id": "arboreal-sight-vpthm",
+    "storage_bucket": "arboreal-sight-vpthm.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:305272750763:android:b085b26551a3ac8a06adee",
+        "android_client_info": {
+          "package_name": "com.officialknightly.chesstopper.mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "305272750763-8q43l85h8splbanhtn30sckucq1dga9v.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDlX-5GN6oRdyJLbof18EED66iMJT17WxQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "305272750763-8q43l85h8splbanhtn30sckucq1dga9v.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
